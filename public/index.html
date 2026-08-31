@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Mapa Operacional CPFL</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <aside class="panel">
+    <div class="brand"><span class="bolt">⌁</span><div><h1>Mapa operacional</h1><p>Rede elétrica CPFL</p></div></div>
+    <label for="search">Número operativo</label>
+    <div class="search-wrap"><input id="search" autocomplete="off" placeholder="Ex.: 1024781"><button id="searchButton" aria-label="Pesquisar">⌕</button></div>
+    <div id="results" class="results"></div>
+    <label class="switch-toggle"><input id="showSwitches" type="checkbox" checked> Mostrar chaves</label>
+    <div class="section-title">Tipos de equipamento</div>
+    <div id="filters" class="filters"></div>
+    <details class="feeder-box"><summary>Filtrar por alimentador</summary><input id="feederSearch" placeholder="Buscar alimentador"><div id="feeders" class="feeders"></div></details>
+    <p id="status" class="status">Carregando ativos da região…</p>
+    <div class="legend"><span><i class="dot"></i> ativo operacional</span><span>Passe o mouse ou clique em um ponto para identificar o item.</span></div>
+  </aside>
+  <main id="map" aria-label="Mapa de ativos da rede elétrica"></main>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>
