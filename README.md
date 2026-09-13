@@ -23,3 +23,9 @@ node server.js
 ```
 
 Por padrão, o serviço escuta na porta 2223. Use `CPFL_MAP_PORT` para definir outra porta.
+
+## Monitoramento de acessos
+
+O mapa registra somente identificadores aleatórios do navegador, sem IP ou dados pessoais. O servidor mantém sessões ativas por 90 segundos para medir acessos simultâneos e cria um registro diário por visitante para os acumulados diário, mensal e anual.
+
+O arquivo [grafana/dashboard.json](grafana/dashboard.json) é provisionado para usar a fonte de dados Prometheus. O Prometheus deve coletar o endpoint `/metrics` do mapa a cada 10 segundos.

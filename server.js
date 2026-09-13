@@ -16,6 +16,7 @@ function loadEnv(file) {
 loadEnv(path.join(root, '..', '.env'));
 const db = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const PORT = Number(process.env.CPFL_MAP_PORT || 2223);
+let lastTelemetryCleanup = 0;
 const types = {
   'ed_capacitor.csv': 'Capacitor',
   'ed_fuse.csv': 'Fusível',
@@ -28,6 +29,75 @@ const types = {
 function json(res, status, data) {
   res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
   res.end(JSON.stringify(data));
+}
+function text(res, status, data) {
+  res.writeHead(status, { 'content-type': 'text/plain; version=0.0.4; charset=utf-8', 'cache-control': 'no-store' });
+  res.end(data);
+}
+function noContent(res) { res.writeHead(204, { 'cache-control': 'no-store' }); res.end(); }
+function readJson(req, limit = 1024) {
+  return new Promise((resolve, reject) => {
+    let body = '';
+    req.setEncoding('utf8');
+    req.on('data', chunk => {
+      body += chunk;
+      if (body.length > limit) { reject(new Error('Corpo da requisição muito grande.')); req.destroy(); }
+    });
+    req.on('end', () => { try { resolve(JSON.parse(body || '{}')); } catch { reject(new Error('JSON inválido.')); } });
+    req.on('error', reject);
+  });
+}
+async function initializeTelemetry() {
+  await db.query(`CREATE TABLE IF NOT EXISTS cpfl_access_sessions (
+    session_id UUID PRIMARY KEY,
+    visitor_id UUID NOT NULL,
+    started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    last_seen TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`);
+  await db.query(`CREATE TABLE IF NOT EXISTS cpfl_access_daily_visitors (
+    day DATE NOT NULL,
+    visitor_id UUID NOT NULL,
+    first_seen TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    last_seen TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (day, visitor_id)
+  )`);
+  await db.query('CREATE INDEX IF NOT EXISTS cpfl_access_sessions_last_seen_idx ON cpfl_access_sessions(last_seen)');
+  await db.query('CREATE INDEX IF NOT EXISTS cpfl_access_daily_visitors_last_seen_idx ON cpfl_access_daily_visitors(last_seen)');
+}
+const telemetryReady = initializeTelemetry();
+function isTelemetryId(value) { return typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value); }
+async function recordHeartbeat(sessionId, visitorId) {
+  await telemetryReady;
+  await db.query(`INSERT INTO cpfl_access_sessions(session_id, visitor_id)
+    VALUES ($1, $2)
+    ON CONFLICT (session_id) DO UPDATE SET visitor_id = EXCLUDED.visitor_id, last_seen = NOW()`, [sessionId, visitorId]);
+  await db.query(`INSERT INTO cpfl_access_daily_visitors(day, visitor_id)
+    VALUES ((NOW() AT TIME ZONE 'America/Sao_Paulo')::date, $1)
+    ON CONFLICT (day, visitor_id) DO UPDATE SET last_seen = NOW()`, [visitorId]);
+  if (Date.now() - lastTelemetryCleanup > 60 * 60 * 1000) {
+    lastTelemetryCleanup = Date.now();
+    await db.query(`DELETE FROM cpfl_access_sessions WHERE last_seen < NOW() - INTERVAL '7 days'`);
+  }
+}
+async function telemetryMetrics() {
+  await telemetryReady;
+  const result = await db.query(`SELECT
+    COUNT(*) FILTER (WHERE s.last_seen > NOW() - INTERVAL '90 seconds')::int AS concurrent,
+    COUNT(DISTINCT d.visitor_id) FILTER (WHERE d.day = (NOW() AT TIME ZONE 'America/Sao_Paulo')::date)::int AS day,
+    COUNT(DISTINCT d.visitor_id) FILTER (WHERE date_trunc('month', d.day) = date_trunc('month', NOW() AT TIME ZONE 'America/Sao_Paulo'))::int AS month,
+    COUNT(DISTINCT d.visitor_id) FILTER (WHERE date_trunc('year', d.day) = date_trunc('year', NOW() AT TIME ZONE 'America/Sao_Paulo'))::int AS year
+    FROM cpfl_access_sessions s FULL OUTER JOIN cpfl_access_daily_visitors d USING (visitor_id)`);
+  const row = result.rows[0];
+  return [
+    '# HELP cpfl_map_accesses_concurrent Sessões com atividade nos últimos 90 segundos.',
+    '# TYPE cpfl_map_accesses_concurrent gauge',
+    `cpfl_map_accesses_concurrent ${row.concurrent || 0}`,
+    '# HELP cpfl_map_unique_visitors Visitantes únicos do Mapa CPFL.',
+    '# TYPE cpfl_map_unique_visitors gauge',
+    `cpfl_map_unique_visitors{period="day"} ${row.day || 0}`,
+    `cpfl_map_unique_visitors{period="month"} ${row.month || 0}`,
+    `cpfl_map_unique_visitors{period="year"} ${row.year || 0}`
+  ].join('\n') + '\n';
 }
 function valid(lon, lat) { return Number.isFinite(lon) && Number.isFinite(lat) && lon >= -75 && lon <= -30 && lat >= -35 && lat <= -5; }
 function parseAsset(fields, type, source) {
@@ -85,6 +155,12 @@ async function importCsv(dataDir) {
 }
 
 async function api(req, res, url) {
+  if (url.pathname === '/api/telemetry/heartbeat' && req.method === 'POST') {
+    const { sessionId, visitorId } = await readJson(req);
+    if (!isTelemetryId(sessionId) || !isTelemetryId(visitorId)) return json(res, 422, { error: 'Identificador de telemetria inválido.' });
+    await recordHeartbeat(sessionId, visitorId);
+    return noContent(res);
+  }
   if (url.pathname === '/api/types') {
     const result = await db.query('SELECT asset_type, count(*)::int AS count FROM cpfl_assets GROUP BY asset_type ORDER BY asset_type');
     return json(res, 200, result.rows);
@@ -122,6 +198,7 @@ async function api(req, res, url) {
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   try {
+    if (url.pathname === '/metrics') return text(res, 200, await telemetryMetrics());
     if (url.pathname.startsWith('/api/')) return await api(req, res, url);
     const safe = url.pathname === '/' ? 'public/index.html' : `public${url.pathname}`;
     const file = path.join(root, safe);

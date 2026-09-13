@@ -75,3 +75,21 @@ async function search() {
   results.classList.add('show'); results.querySelectorAll('[data-i]').forEach(button=>button.onclick=()=>{const item=items[Number(button.dataset.i)];map.setView([item.latitude,item.longitude],17);L.popup().setLatLng([item.latitude,item.longitude]).setContent(popup(item)).openOn(map);document.querySelector(`[data-route-id="${item.id}"]`)?.addEventListener('click',()=>routeTo(item));results.classList.remove('show');});
 }
 document.querySelector('#searchButton').onclick=search; document.querySelector('#search').addEventListener('keydown',e=>{if(e.key==='Enter')search()}); map.on('moveend',queueLoad); initialize();
+
+function telemetryId(storage, key) {
+  try {
+    let value = storage.getItem(key);
+    if (!value) { value = crypto.randomUUID(); storage.setItem(key, value); }
+    return value;
+  } catch { return crypto.randomUUID(); }
+}
+const telemetryVisitorId = telemetryId(localStorage, 'cpfl-visitor-id');
+const telemetrySessionId = telemetryId(sessionStorage, 'cpfl-session-id');
+const telemetryPayload = JSON.stringify({ sessionId: telemetrySessionId, visitorId: telemetryVisitorId });
+function sendHeartbeat(keepalive = false) {
+  return fetch('/api/telemetry/heartbeat', { method:'POST', headers:{'content-type':'application/json'}, body:telemetryPayload, keepalive }).catch(() => {});
+}
+sendHeartbeat();
+setInterval(() => { if (!document.hidden) sendHeartbeat(); }, 30000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) sendHeartbeat(); });
+window.addEventListener('pagehide', () => { navigator.sendBeacon('/api/telemetry/heartbeat', new Blob([telemetryPayload], { type:'application/json' })); });

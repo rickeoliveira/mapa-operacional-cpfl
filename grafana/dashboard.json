@@ -1,0 +1,21 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "panels": [
+    { "datasource": { "type": "prometheus", "uid": "cdymvimizwf7kf" }, "fieldConfig": { "defaults": { "decimals": 0 }, "overrides": [] }, "gridPos": { "h": 8, "w": 6, "x": 0, "y": 0 }, "id": 1, "options": { "colorMode": "value", "graphMode": "none", "justifyMode": "center", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } }, "targets": [{ "expr": "cpfl_map_accesses_concurrent", "refId": "A" }], "title": "Acessos simultâneos (agora)", "type": "stat" },
+    { "datasource": { "type": "prometheus", "uid": "cdymvimizwf7kf" }, "fieldConfig": { "defaults": { "decimals": 0 }, "overrides": [] }, "gridPos": { "h": 8, "w": 6, "x": 6, "y": 0 }, "id": 2, "options": { "colorMode": "value", "graphMode": "none", "justifyMode": "center", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } }, "targets": [{ "expr": "cpfl_map_unique_visitors{period=\"day\"}", "refId": "A" }], "title": "Visitantes únicos hoje", "type": "stat" },
+    { "datasource": { "type": "prometheus", "uid": "cdymvimizwf7kf" }, "fieldConfig": { "defaults": { "decimals": 0 }, "overrides": [] }, "gridPos": { "h": 8, "w": 6, "x": 12, "y": 0 }, "id": 3, "options": { "colorMode": "value", "graphMode": "none", "justifyMode": "center", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } }, "targets": [{ "expr": "cpfl_map_unique_visitors{period=\"month\"}", "refId": "A" }], "title": "Visitantes únicos no mês", "type": "stat" },
+    { "datasource": { "type": "prometheus", "uid": "cdymvimizwf7kf" }, "fieldConfig": { "defaults": { "decimals": 0 }, "overrides": [] }, "gridPos": { "h": 8, "w": 6, "x": 18, "y": 0 }, "id": 4, "options": { "colorMode": "value", "graphMode": "none", "justifyMode": "center", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } }, "targets": [{ "expr": "cpfl_map_unique_visitors{period=\"year\"}", "refId": "A" }], "title": "Visitantes únicos no ano", "type": "stat" },
+    { "datasource": { "type": "prometheus", "uid": "cdymvimizwf7kf" }, "fieldConfig": { "defaults": { "decimals": 0 }, "overrides": [] }, "gridPos": { "h": 10, "w": 12, "x": 0, "y": 8 }, "id": 5, "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": false }, "tooltip": { "mode": "single" } }, "targets": [{ "expr": "cpfl_map_unique_visitors{period=\"day\"}", "legendFormat": "Únicos no dia", "refId": "A" }], "title": "Visitantes únicos por dia", "type": "timeseries" },
+    { "datasource": { "type": "prometheus", "uid": "cdymvimizwf7kf" }, "fieldConfig": { "defaults": { "decimals": 0 }, "overrides": [] }, "gridPos": { "h": 10, "w": 12, "x": 12, "y": 8 }, "id": 6, "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "single" } }, "targets": [{ "expr": "cpfl_map_unique_visitors{period=~\"month|year\"}", "legendFormat": "{{period}}", "refId": "A" }], "title": "Acumulados únicos por mês e ano", "type": "timeseries" }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 39,
+  "tags": ["cpfl", "acessos"],
+  "templating": { "list": [] },
+  "time": { "from": "now-30d", "to": "now" },
+  "timezone": "America/Sao_Paulo",
+  "title": "Mapa CPFL — Acessos",
+  "uid": "cpfl-acessos",
+  "version": 2
+}
