@@ -1,11 +1,16 @@
 const map = L.map('map', { zoomControl: false }).setView([-22.35, -47.75], 8);
 L.control.zoom({ position: 'bottomright' }).addTo(map);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map);
-const layer = L.layerGroup().addTo(map), status = document.querySelector('#status'), filters = document.querySelector('#filters'), feedersBox = document.querySelector('#feeders'), results = document.querySelector('#results');
+const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' });
+const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Tiles © Esri' });
+streetLayer.addTo(map);
+L.control.layers({ 'Mapa de ruas': streetLayer, 'Visão de satélite': satelliteLayer }, null, { position: 'bottomright' }).addTo(map);
+const layer = L.layerGroup().addTo(map), networkLayer = L.layerGroup().addTo(map), status = document.querySelector('#status'), filters = document.querySelector('#filters'), feedersBox = document.querySelector('#feeders'), results = document.querySelector('#results'), networkVisible = document.querySelector('#networkVisible');
 let typeSet = new Set(), feederSet = new Set(), timer, routeControl, currentLocationMarker, currentLocationAccuracy;
+let networkEnabled = networkVisible.checked;
 const colors = { Transformador:'#0f7593', Fusível:'#de7a22', Chave:'#6e57a5', Religador:'#ca4163', Regulador:'#3a8d52', Capacitor:'#be8b14' };
 const typeLabels = { Chave: 'Chave Faca' };
 function displayAssetType(type) { return typeLabels[type] || type; }
+function feederColor(feeder) { let hash = 0; for (const char of feeder) hash = ((hash << 5) - hash + char.charCodeAt(0)) | 0; return `hsl(${Math.abs(hash) % 360} 72% 42%)`; }
 function escapeHtml(value) { return String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function icon(type) { const c = colors[type] || '#0f7593'; return L.divIcon({ className:'asset-marker', iconSize:[10,10], iconAnchor:[5,5], html:`<span style="display:block;width:100%;height:100%;border-radius:50%;background:${c}"></span>` }); }
 function googleMapsUrl(item) { return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${item.latitude},${item.longitude}`)}&travelmode=driving`; }
@@ -13,15 +18,44 @@ function popup(item) { return `<b>${escapeHtml(displayAssetType(item.asset_type)
 function marker(item) { const point = L.marker([item.latitude,item.longitude], {icon:icon(item.asset_type), riseOnHover:true}).bindTooltip(`${displayAssetType(item.asset_type)} · ${item.operational_number}`, { direction:'top', offset:[0,-6] }).bindPopup(popup(item)); point.on('popupopen',()=>document.querySelector(`[data-route-id="${item.id}"]`)?.addEventListener('click',()=>routeTo(item))); return point; }
 function queueLoad(){ clearTimeout(timer); timer=setTimeout(loadAssets,180); }
 function refreshTypeSet() { typeSet = new Set([...filters.querySelectorAll('input:checked')].map(x=>x.value)); }
+function refreshFeederSet() { feederSet = new Set([...feedersBox.querySelectorAll('input:checked')].map(x=>x.value)); }
+function selectedFeeders() {
+  const total = feedersBox.querySelectorAll('input').length;
+  if (!feederSet.size || feederSet.size === total) return feederSet.size ? null : [];
+  return [...feederSet];
+}
+function boundsParams(limit) {
+  const b = map.getBounds(), params = new URLSearchParams({ west:b.getWest(), east:b.getEast(), south:b.getSouth(), north:b.getNorth(), limit });
+  const selected = selectedFeeders();
+  if (selected?.length) params.set('feeders', selected.join(','));
+  return params;
+}
+async function loadNetwork() {
+  networkLayer.clearLayers();
+  const selected = selectedFeeders();
+  if (!networkEnabled || (Array.isArray(selected) && selected.length === 0) || map.getZoom() < 10) return;
+  const params = boundsParams(12000);
+  const response = await fetch(`/api/network?${params}`); if (!response.ok) return;
+  const { items, truncated } = await response.json();
+  const grouped = new Map();
+  for (const item of items) {
+    if (!grouped.has(item.feeder)) grouped.set(item.feeder, []);
+    grouped.get(item.feeder).push([[item.latitude_from,item.longitude_from],[item.latitude_to,item.longitude_to]]);
+  }
+  for (const [feeder, segments] of grouped) L.polyline(segments, { color:feederColor(feeder), weight:3, opacity:.8, interactive:false }).addTo(networkLayer);
+  return { count: items.length, truncated };
+}
 async function loadAssets() {
-  if (!typeSet.size) { layer.clearLayers(); status.textContent='Selecione ao menos um tipo de equipamento.'; return; }
-  if (map.getZoom() < 11) { layer.clearLayers(); status.textContent='Aproxime o mapa para carregar os ativos desta região.'; return; }
-  const b = map.getBounds(), params = new URLSearchParams({west:b.getWest(),east:b.getEast(),south:b.getSouth(),north:b.getNorth(),limit:1800,types:[...typeSet].join(',')});
-  if (feederSet.size) params.set('feeders', [...feederSet].join(','));
+  const selected = selectedFeeders();
+  const network = await loadNetwork();
+  if (!typeSet.size || selected?.length === 0) { layer.clearLayers(); status.textContent='Selecione ao menos um tipo de equipamento e um alimentador.'; return; }
+  if (map.getZoom() < 11) { layer.clearLayers(); status.textContent=networkEnabled && map.getZoom() >= 10 ? `${network?.count?.toLocaleString('pt-BR') || 0} trechos de rede visíveis. Aproxime para carregar os equipamentos.` : 'Aproxime o mapa para carregar os ativos desta região.'; return; }
+  const params = boundsParams(1800); params.set('types',[...typeSet].join(','));
   const response = await fetch(`/api/assets?${params}`); if (!response.ok) return;
   const {items,truncated} = await response.json(); layer.clearLayers();
   for (const item of items) marker(item).addTo(layer);
-  status.textContent = `${items.length.toLocaleString('pt-BR')} ativos nesta área${truncated ? ' — aproxime o mapa para ver todos.' : '.'}`;
+  const networkText = networkEnabled ? ` · ${network?.count?.toLocaleString('pt-BR') || 0} trechos de rede` : '';
+  status.textContent = `${items.length.toLocaleString('pt-BR')} ativos nesta área${networkText}${truncated || network?.truncated ? ' — aproxime o mapa para ver todos.' : '.'}`;
 }
 function routeTo(item) {
   if (!navigator.geolocation) { status.textContent='Este navegador não informa a localização atual.'; return; }
@@ -62,17 +96,28 @@ async function initialize() {
   const [types, feeders] = await Promise.all([fetch('/api/types').then(r=>r.json()),fetch('/api/feeders').then(r=>r.json())]);
   typeSet = new Set(types.map(t=>t.asset_type));
   filters.innerHTML = types.map(t=>`<label class="filter"><input type="checkbox" checked value="${escapeHtml(t.asset_type)}">${escapeHtml(displayAssetType(t.asset_type))} <small>(${t.count.toLocaleString('pt-BR')})</small></label>`).join('');
-  feedersBox.innerHTML = feeders.map(f=>`<label class="feeder-filter" data-feeder="${escapeHtml(f.feeder).toLowerCase()}"><input type="checkbox" value="${escapeHtml(f.feeder)}">${escapeHtml(f.feeder)} <small>(${f.count.toLocaleString('pt-BR')})</small></label>`).join('');
+  feedersBox.innerHTML = feeders.map(f=>`<label class="feeder-filter" data-feeder="${escapeHtml(f.feeder).toLowerCase()}"><input type="checkbox" checked value="${escapeHtml(f.feeder)}"><i class="feeder-color" style="background:${feederColor(f.feeder)}"></i>${escapeHtml(f.feeder)} <small>(${f.segment_count.toLocaleString('pt-BR')} trechos)</small></label>`).join('');
+  refreshFeederSet();
   filters.addEventListener('change',()=>{refreshTypeSet();queueLoad()});
-  feedersBox.addEventListener('change',()=>{feederSet=new Set([...feedersBox.querySelectorAll('input:checked')].map(x=>x.value));queueLoad()});
+  feedersBox.addEventListener('change',()=>{refreshFeederSet();queueLoad()});
   document.querySelector('#feederSearch').addEventListener('input',event=>{const q=event.target.value.trim().toLowerCase();feedersBox.querySelectorAll('.feeder-filter').forEach(el=>el.hidden=!!q&&!el.dataset.feeder.includes(q));});
+  document.querySelector('#feedersAll').onclick=()=>{feedersBox.querySelectorAll('input').forEach(input=>{input.checked=true});refreshFeederSet();queueLoad()};
+  document.querySelector('#feedersNone').onclick=()=>{feedersBox.querySelectorAll('input').forEach(input=>{input.checked=false});refreshFeederSet();queueLoad()};
+  networkVisible.addEventListener('change',()=>{networkEnabled=networkVisible.checked;queueLoad()});
   queueLoad();
 }
 async function search() {
   const q=document.querySelector('#search').value.trim(); if(q.length<2){results.classList.remove('show');return;}
-  const items=await (await fetch(`/api/search?q=${encodeURIComponent(q)}`)).json();
-  results.innerHTML=items.length?items.map((item,i)=>`<button class="result" data-i="${i}"><b>${escapeHtml(item.operational_number)} · ${escapeHtml(displayAssetType(item.asset_type))}</b><small>Alimentador ${escapeHtml(item.feeder)}</small></button>`).join(''):'<div class="result">Nenhum item encontrado.</div>';
-  results.classList.add('show'); results.querySelectorAll('[data-i]').forEach(button=>button.onclick=()=>{const item=items[Number(button.dataset.i)];map.setView([item.latitude,item.longitude],17);L.popup().setLatLng([item.latitude,item.longitude]).setContent(popup(item)).openOn(map);document.querySelector(`[data-route-id="${item.id}"]`)?.addEventListener('click',()=>routeTo(item));results.classList.remove('show');});
+  const numeric = /\d/.test(q);
+  const [assets, streets] = await Promise.all([
+    numeric ? fetch(`/api/search?q=${encodeURIComponent(q)}`).then(r=>r.ok?r.json():[]) : Promise.resolve([]),
+    q.length >= 3 ? fetch(`/api/geocode?q=${encodeURIComponent(q)}`).then(r=>r.ok?r.json():[]) : Promise.resolve([])
+  ]);
+  const items=[...assets,...streets];
+  results.innerHTML=items.length?items.map((item,i)=>item.kind==='street'
+    ? `<button class="result" data-i="${i}"><b>${escapeHtml(item.name)}</b><small>Rua / endereço</small></button>`
+    : `<button class="result" data-i="${i}"><b>${escapeHtml(item.operational_number)} · ${escapeHtml(displayAssetType(item.asset_type))}</b><small>Alimentador ${escapeHtml(item.feeder)}</small></button>`).join(''):'<div class="result">Nenhum item encontrado.</div>';
+  results.classList.add('show'); results.querySelectorAll('[data-i]').forEach(button=>button.onclick=()=>{const item=items[Number(button.dataset.i)];map.setView([item.latitude,item.longitude],item.kind==='street'?16:17);if(item.kind==='street'){L.popup().setLatLng([item.latitude,item.longitude]).setContent(`<b>${escapeHtml(item.name)}</b>`).openOn(map);}else{L.popup().setLatLng([item.latitude,item.longitude]).setContent(popup(item)).openOn(map);document.querySelector(`[data-route-id="${item.id}"]`)?.addEventListener('click',()=>routeTo(item));}results.classList.remove('show');});
 }
 document.querySelector('#searchButton').onclick=search; document.querySelector('#search').addEventListener('keydown',e=>{if(e.key==='Enter')search()}); map.on('moveend',queueLoad); initialize();
 

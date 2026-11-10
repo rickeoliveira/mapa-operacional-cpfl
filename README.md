@@ -4,21 +4,19 @@ Aplicação web para pesquisar ativos da rede elétrica por número operativo, v
 
 ## Dados
 
-Os CSVs de origem não são versionados. Coloque-os em `data/` usando os nomes esperados pelo importador:
+Os dados operacionais não são versionados. O importador recebe uma pasta-raiz contendo as subpastas `1` a `15`; em cada uma delas devem estar os arquivos exportados:
 
-- `ed_capacitor.csv`
-- `ed_fuse.csv`
-- `ed_oh_transformer.csv`
-- `ed_recloser.csv`
-- `ed_regulator.csv`
-- `ed_switch.csv`
+- `ed_capacitor.txt`, `ed_fuse.txt`, `ed_oh_transformer.txt`, `ed_recloser.txt`, `ed_regulator.txt`, `ed_switch.txt` e `ed_ug_switch.txt`;
+- `ed_oh_primary_conductor.txt` para os trechos da rede por alimentador.
+
+Os equipamentos são atualizados e os trechos da rede são carregados em tabela separada. No mapa, cada alimentador recebe uma cor determinística e pode ser filtrado individualmente.
 
 ## Configuração
 
 A aplicação lê `DATABASE_URL` de um arquivo `.env` no diretório-pai. Para importar os dados e iniciar o serviço:
 
 ```bash
-node server.js import data
+node server.js import /caminho/para/1.1
 node server.js
 ```
 
