@@ -271,7 +271,7 @@ async function api(req, res, url) {
     const south = Number(url.searchParams.get('south')), north = Number(url.searchParams.get('north'));
     const requestedFeeders = (url.searchParams.get('feeders') || '').split(',').filter(Boolean);
     if (![west, east, south, north].every(Number.isFinite) || west >= east || south >= north) return json(res, 422, { error: 'Área inválida.' });
-    const limit = Math.max(1000, Math.min(Number(url.searchParams.get('limit')) || 12000, 20000));
+    const limit = Math.max(1, Math.min(Number(url.searchParams.get('limit')) || 12000, 20000));
     const params = [west, east, south, north];
     let where = '((longitude_from BETWEEN $1 AND $2 AND latitude_from BETWEEN $3 AND $4) OR (longitude_to BETWEEN $1 AND $2 AND latitude_to BETWEEN $3 AND $4))';
     if (requestedFeeders.length) { params.push(requestedFeeders); where += ` AND feeder = ANY($${params.length})`; }
