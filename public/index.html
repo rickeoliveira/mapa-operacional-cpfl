@@ -9,7 +9,8 @@
   <style>
     .asset-marker{width:11px!important;height:11px!important}.feeder-filter[hidden]{display:none!important}
     @media (max-width:768px), (pointer:coarse){
-      #map{height:100dvh}
+      #map{height:var(--map-height,100dvh)}
+      .panel{max-height:calc(var(--map-height,100dvh) - 20px)}
       .leaflet-bottom{bottom:max(12px,env(safe-area-inset-bottom))}
       .leaflet-right{right:max(12px,env(safe-area-inset-right))}
       .leaflet-control{margin-bottom:10px!important}

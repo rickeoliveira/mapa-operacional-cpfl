@@ -1,4 +1,12 @@
 const map = L.map('map', { zoomControl: false, maxZoom: 18 }).setView([-22.35, -47.75], 8);
+function fitMapToUsableViewport() {
+  const height = Math.round(window.visualViewport?.height || window.innerHeight);
+  document.documentElement.style.setProperty('--map-height', `${height}px`);
+  map.invalidateSize({ pan: false });
+}
+window.addEventListener('resize', fitMapToUsableViewport);
+window.visualViewport?.addEventListener('resize', fitMapToUsableViewport);
+fitMapToUsableViewport();
 L.control.zoom({ position: 'bottomright' }).addTo(map);
 const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' });
 const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 18, maxNativeZoom: 18, attribution: 'Tiles © Esri' });
