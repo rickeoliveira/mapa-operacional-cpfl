@@ -230,8 +230,8 @@ async function api(req, res, url) {
     const q = (url.searchParams.get('q') || '').trim();
     if (q.length < 2) return json(res, 200, []);
     const result = await db.query(`SELECT id, asset_type, feeder, operational_number, longitude, latitude
-      FROM cpfl_assets WHERE operational_number = $1 OR operational_number ILIKE $2
-      ORDER BY CASE WHEN operational_number = $1 THEN 0 ELSE 1 END, asset_type LIMIT 50`, [q, `${q}%`]);
+      FROM cpfl_assets WHERE operational_number LIKE $1
+      ORDER BY CASE WHEN operational_number = $2 THEN 0 ELSE 1 END, asset_type LIMIT 50`, [`${q}%`, q]);
     return json(res, 200, result.rows);
   }
   if (url.pathname === '/api/geocode') {

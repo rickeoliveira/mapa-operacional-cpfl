@@ -145,10 +145,10 @@ async function initialize() {
 }
 async function search() {
   const q=document.querySelector('#search').value.trim(); if(q.length<2){results.classList.remove('show');return;}
-  const numeric = /\d/.test(q);
+  const numeric = /^\d+$/.test(q);
   const [assets, streets] = await Promise.all([
     numeric ? fetch(`/api/search?q=${encodeURIComponent(q)}`).then(r=>r.ok?r.json():[]) : Promise.resolve([]),
-    q.length >= 3 ? fetch(`/api/geocode?q=${encodeURIComponent(q)}`).then(r=>r.ok?r.json():[]) : Promise.resolve([])
+    !numeric && q.length >= 3 ? fetch(`/api/geocode?q=${encodeURIComponent(q)}`).then(r=>r.ok?r.json():[]) : Promise.resolve([])
   ]);
   const items=[...assets,...streets];
   results.innerHTML=items.length?items.map((item,i)=>item.kind==='street'
