@@ -8,17 +8,19 @@
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-  <aside class="panel">
-    <div class="brand"><span class="bolt">⌁</span><div><h1>Mapa operacional</h1><p>Rede elétrica CPFL</p></div></div>
+  <aside class="panel" id="panel">
+    <div class="panel-header"><div class="brand"><span class="bolt">⌁</span><div><h1>Mapa operacional</h1><p>Rede elétrica CPFL</p></div></div><button id="panelToggle" class="panel-toggle" type="button" aria-label="Recolher painel de filtros" aria-expanded="true"><span aria-hidden="true">‹</span></button></div>
+    <div class="panel-content">
     <label for="search">Número operativo ou rua</label>
     <div class="search-wrap"><input id="search" autocomplete="off" placeholder="Ex.: 1024781 ou Av. Paulista"><button id="searchButton" aria-label="Pesquisar">⌕</button></div>
     <div id="results" class="results"></div>
-    <div class="section-title">Tipos de equipamento</div>
+    <div class="filter-heading"><span class="section-title">Tipos de equipamento</span><button id="typesAll" class="text-action" type="button">Todos</button><button id="typesNone" class="text-action" type="button">Nenhum</button></div>
     <div id="filters" class="filters"></div>
     <div class="network-toggle"><label class="switch-toggle"><input id="networkVisible" type="checkbox" checked> Exibir rede por alimentador</label><small>Cada alimentador possui uma cor própria.</small></div>
-    <details class="feeder-box"><summary>Filtrar alimentadores e cores</summary><input id="feederSearch" placeholder="Buscar alimentador"><div class="feeder-actions"><button id="feedersAll" type="button">Todos</button><button id="feedersNone" type="button">Nenhum</button></div><div id="feeders" class="feeders"></div></details>
+    <details class="feeder-box" open><summary>Alimentadores e cores <span id="feederSelectionCount"></span></summary><div class="feeder-search-wrap"><input id="feederSearch" autocomplete="off" placeholder="Digite o alimentador, ex.: JAR"><button id="feederSearchClear" type="button" aria-label="Limpar busca">×</button></div><div class="feeder-actions"><button id="feedersMatched" type="button">Só resultados</button><button id="feedersAll" type="button">Todos</button><button id="feedersNone" type="button">Nenhum</button></div><p id="feederSearchHint" class="feeder-search-hint">Todos os alimentadores estão selecionados.</p><div id="feeders" class="feeders"></div></details>
     <p id="status" class="status">Carregando ativos da região…</p>
     <div class="legend"><span><i class="dot"></i> ativo operacional</span><span>Passe o mouse ou clique em um ponto para identificar o item.</span></div>
+    </div>
   </aside>
   <main id="map" aria-label="Mapa de ativos da rede elétrica"></main>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
