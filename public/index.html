@@ -6,6 +6,7 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css">
   <link rel="stylesheet" href="/style.css">
+  <style>.asset-marker{width:11px!important;height:11px!important}</style>
 </head>
 <body>
   <aside class="panel" id="panel">
@@ -17,7 +18,7 @@
     <div class="filter-heading"><span class="section-title">Tipos de equipamento</span><button id="typesAll" class="text-action" type="button">Todos</button><button id="typesNone" class="text-action" type="button">Nenhum</button></div>
     <div id="filters" class="filters"></div>
     <div class="network-toggle"><label class="switch-toggle"><input id="networkVisible" type="checkbox" checked> Exibir rede por alimentador</label><small>Cada alimentador possui uma cor própria.</small></div>
-    <details class="feeder-box" open><summary>Alimentadores e cores <span id="feederSelectionCount"></span></summary><div class="feeder-search-wrap"><input id="feederSearch" autocomplete="off" placeholder="Digite o alimentador, ex.: JAR"><button id="feederSearchClear" type="button" aria-label="Limpar busca">×</button></div><div class="feeder-actions"><button id="feedersMatched" type="button">Só resultados</button><button id="feedersAll" type="button">Todos</button><button id="feedersNone" type="button">Nenhum</button></div><p id="feederSearchHint" class="feeder-search-hint">Todos os alimentadores estão selecionados.</p><div id="feeders" class="feeders"></div></details>
+    <details class="feeder-box" open><summary>Alimentadores e cores <span id="feederSelectionCount"></span></summary><div class="feeder-search-wrap"><input id="feederSearch" autocomplete="off" placeholder="Digite o alimentador, ex.: BBA"><button id="feederSearchClear" type="button" aria-label="Limpar busca">×</button></div><div class="feeder-actions"><button id="feedersMatched" type="button">Selecionar resultados</button><button id="feedersAll" type="button">Todos</button><button id="feedersNone" type="button">Nenhum</button></div><p id="feederSearchHint" class="feeder-search-hint">Todos os alimentadores estão selecionados.</p><div id="feeders" class="feeders"></div></details>
     <p id="status" class="status">Carregando ativos da região…</p>
     <div class="legend"><span><i class="dot"></i> ativo operacional</span><span>Passe o mouse ou clique em um ponto para identificar o item.</span></div>
     </div>

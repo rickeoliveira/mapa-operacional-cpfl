@@ -5,6 +5,8 @@ const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/
 streetLayer.addTo(map);
 L.control.layers({ 'Mapa de ruas': streetLayer, 'Visão de satélite': satelliteLayer }, null, { position: 'bottomright' }).addTo(map);
 const layer = L.layerGroup().addTo(map), networkLayer = L.layerGroup().addTo(map), status = document.querySelector('#status'), filters = document.querySelector('#filters'), feedersBox = document.querySelector('#feeders'), results = document.querySelector('#results'), networkVisible = document.querySelector('#networkVisible');
+const NETWORK_MIN_ZOOM = 12;
+const NETWORK_SEGMENT_LIMIT = 5000;
 let typeSet = new Set(), feederSet = new Set(), timer, routeControl, currentLocationMarker, currentLocationAccuracy;
 let networkEnabled = networkVisible.checked;
 const feederColors = new Map();
@@ -14,7 +16,7 @@ function displayAssetType(type) { return typeLabels[type] || type; }
 function feederColor(feeder) { return feederColors.get(feeder) || '#276fbf'; }
 function assignFeederColors(feeders) { feeders.forEach((item, index) => { const hue = Math.round((index * 137.508) % 360); const lightness = index % 3 === 0 ? 36 : index % 3 === 1 ? 45 : 31; feederColors.set(item.feeder, `hsl(${hue} 78% ${lightness}%)`); }); }
 function escapeHtml(value) { return String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function icon(type) { const c = colors[type] || '#0f7593'; return L.divIcon({ className:'asset-marker', iconSize:[10,10], iconAnchor:[5,5], html:`<span style="display:block;width:100%;height:100%;border-radius:50%;background:${c}"></span>` }); }
+function icon(type) { const c = colors[type] || '#0f7593'; return L.divIcon({ className:'asset-marker', iconSize:[11,11], iconAnchor:[5.5,5.5], html:`<span style="display:block;width:100%;height:100%;border-radius:50%;background:${c}"></span>` }); }
 function googleMapsUrl(item) { return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${item.latitude},${item.longitude}`)}&travelmode=driving`; }
 function popup(item) { return `<b>${escapeHtml(displayAssetType(item.asset_type))}</b><br>Número operativo: <strong>${escapeHtml(item.operational_number)}</strong><br>Alimentador: ${escapeHtml(item.feeder)}<div class="route-actions"><button class="route-button" data-route-id="${item.id}">Traçar no mapa</button><a class="google-route" href="${googleMapsUrl(item)}" target="_blank" rel="noopener">Abrir no Google Maps</a></div>`; }
 function marker(item) { const point = L.marker([item.latitude,item.longitude], {icon:icon(item.asset_type), riseOnHover:true}).bindTooltip(`${displayAssetType(item.asset_type)} · ${item.operational_number}`, { direction:'top', offset:[0,-6] }).bindPopup(popup(item)); point.on('popupopen',()=>document.querySelector(`[data-route-id="${item.id}"]`)?.addEventListener('click',()=>routeTo(item))); return point; }
@@ -26,7 +28,7 @@ function updateFeederSelection() {
   const visible = inputs.filter(input => !input.closest('.feeder-filter').hidden).length;
   document.querySelector('#feederSelectionCount').textContent = `(${feederSet.size}/${inputs.length})`;
   const query = document.querySelector('#feederSearch').value.trim();
-  document.querySelector('#feederSearchHint').textContent = query ? `${visible} resultado${visible === 1 ? '' : 's'} para “${query}”. Use “Só resultados” para filtrar.` : `${feederSet.size === inputs.length ? 'Todos os' : `${feederSet.size} de ${inputs.length}`} alimentadores estão selecionados.`;
+  document.querySelector('#feederSearchHint').textContent = query ? `${visible} resultado${visible === 1 ? '' : 's'} para “${query}”. Marque ou desmarque cada alimentador que desejar.` : `${feederSet.size === inputs.length ? 'Todos os' : `${feederSet.size} de ${inputs.length}`} alimentadores estão selecionados.`;
 }
 function filterFeeders(query) {
   const normalized = query.trim().toLowerCase();
@@ -47,8 +49,8 @@ function boundsParams(limit) {
 async function loadNetwork() {
   networkLayer.clearLayers();
   const selected = selectedFeeders();
-  if (!networkEnabled || (Array.isArray(selected) && selected.length === 0) || map.getZoom() < 10) return;
-  const params = boundsParams(12000);
+  if (!networkEnabled || (Array.isArray(selected) && selected.length === 0) || map.getZoom() < NETWORK_MIN_ZOOM) return;
+  const params = boundsParams(NETWORK_SEGMENT_LIMIT);
   const response = await fetch(`/api/network?${params}`); if (!response.ok) return;
   const { items, truncated } = await response.json();
   const grouped = new Map();
@@ -69,7 +71,7 @@ async function loadAssets() {
   const selected = selectedFeeders();
   const network = await loadNetwork();
   if (!typeSet.size || selected?.length === 0) { layer.clearLayers(); status.textContent='Selecione ao menos um tipo de equipamento e um alimentador.'; return; }
-  if (map.getZoom() < 11) { layer.clearLayers(); status.textContent=networkEnabled && map.getZoom() >= 10 ? `${network?.count?.toLocaleString('pt-BR') || 0} trechos de rede visíveis. Aproxime para carregar os equipamentos.` : 'Aproxime o mapa para carregar os ativos desta região.'; return; }
+  if (map.getZoom() < 11) { layer.clearLayers(); status.textContent=networkEnabled && map.getZoom() >= NETWORK_MIN_ZOOM ? `${network?.count?.toLocaleString('pt-BR') || 0} trechos de rede visíveis. Aproxime para carregar os equipamentos.` : `Aproxime o mapa para carregar os ativos${networkEnabled ? ` e a rede (zoom ${NETWORK_MIN_ZOOM} ou maior)` : ''}.`; return; }
   const params = boundsParams(1800); params.set('types',[...typeSet].join(','));
   const response = await fetch(`/api/assets?${params}`); if (!response.ok) return;
   const {items,truncated} = await response.json(); layer.clearLayers();
