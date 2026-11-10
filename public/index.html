@@ -9,9 +9,9 @@
   <style>
     .asset-marker{width:11px!important;height:11px!important}.feeder-filter[hidden]{display:none!important}
     @media (max-width:768px), (pointer:coarse){
-      #map{height:var(--map-height,100dvh)}
-      .panel{max-height:calc(var(--map-height,100dvh) - 20px)}
-      .leaflet-bottom{bottom:max(12px,env(safe-area-inset-bottom))}
+      #map{height:100vh}
+      .panel{max-height:42vh}
+      .leaflet-bottom{bottom:max(var(--map-controls-bottom,12px),calc(12px + env(safe-area-inset-bottom)))}
       .leaflet-right{right:max(12px,env(safe-area-inset-right))}
       .leaflet-control{margin-bottom:10px!important}
       .leaflet-bar a,.current-location-button,.leaflet-control-layers-toggle{width:44px!important;height:44px!important;line-height:44px!important}
