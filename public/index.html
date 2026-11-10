@@ -6,7 +6,20 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css">
   <link rel="stylesheet" href="/style.css">
-  <style>.asset-marker{width:11px!important;height:11px!important}.feeder-filter[hidden]{display:none!important}</style>
+  <style>
+    .asset-marker{width:11px!important;height:11px!important}.feeder-filter[hidden]{display:none!important}
+    @media (max-width:768px), (pointer:coarse){
+      #map{height:100dvh}
+      .leaflet-bottom{bottom:max(12px,env(safe-area-inset-bottom))}
+      .leaflet-right{right:max(12px,env(safe-area-inset-right))}
+      .leaflet-control{margin-bottom:10px!important}
+      .leaflet-bar a,.current-location-button,.leaflet-control-layers-toggle{width:44px!important;height:44px!important;line-height:44px!important}
+      .leaflet-control-zoom a{font-size:29px!important}
+      .current-location-button svg{width:24px;height:24px}
+      .leaflet-control-layers-toggle{background-size:26px 26px!important}
+      .leaflet-control-layers{max-width:calc(100vw - 24px)}
+    }
+  </style>
 </head>
 <body>
   <aside class="panel" id="panel">
