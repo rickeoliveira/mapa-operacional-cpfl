@@ -1,0 +1,9 @@
+{
+  "name": "Mapa Operacional CPFL",
+  "short_name": "Mapa CPFL",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#10263f",
+  "theme_color": "#10263f",
+  "lang": "pt-BR"
+}

@@ -1,7 +1,11 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#10263f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="/manifest.webmanifest">
   <title>Mapa Operacional CPFL</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css">
@@ -9,8 +13,9 @@
   <style>
     .asset-marker{width:11px!important;height:11px!important}.feeder-filter[hidden]{display:none!important}
     @media (max-width:768px), (pointer:coarse){
-      #map{height:100vh}
-      .panel{max-height:42vh}
+      html,body{width:100%;height:100%;overflow:hidden;background:#10263f}
+      #map{height:100dvh;min-height:100vh}
+      .panel{top:calc(10px + env(safe-area-inset-top));left:calc(10px + env(safe-area-inset-left));max-height:42vh}
       .leaflet-bottom{bottom:max(var(--map-controls-bottom,12px),calc(12px + env(safe-area-inset-bottom)))}
       .leaflet-right{right:max(12px,env(safe-area-inset-right))}
       .leaflet-control{margin-bottom:10px!important}
