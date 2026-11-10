@@ -1,7 +1,7 @@
-const map = L.map('map', { zoomControl: false }).setView([-22.35, -47.75], 8);
+const map = L.map('map', { zoomControl: false, maxZoom: 18 }).setView([-22.35, -47.75], 8);
 L.control.zoom({ position: 'bottomright' }).addTo(map);
 const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' });
-const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Tiles © Esri' });
+const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 18, maxNativeZoom: 18, attribution: 'Tiles © Esri' });
 streetLayer.addTo(map);
 L.control.layers({ 'Mapa de ruas': streetLayer, 'Visão de satélite': satelliteLayer }, null, { position: 'bottomright' }).addTo(map);
 const layer = L.layerGroup().addTo(map), networkLayer = L.layerGroup().addTo(map), status = document.querySelector('#status'), filters = document.querySelector('#filters'), feedersBox = document.querySelector('#feeders'), results = document.querySelector('#results'), networkVisible = document.querySelector('#networkVisible');
